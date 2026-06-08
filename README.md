@@ -21,4 +21,4 @@ La tercera forma normal dice que se deben eliminar las dependencias transitivas,
 ![alt text](image-4.png)
 
 # Parte 3: Diagrama UML E-R
-
+![alt text](image-6.png)
