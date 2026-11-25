@@ -1,0 +1,42 @@
+name: CI (valida que los scripts SQL se ejecuten)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tienda
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: tienda
+    steps:
+      - uses: actions/checkout@v4
+      - name: Crear esquema y cargar datos
+        run: |
+          psql -v ON_ERROR_STOP=1 -f sql/01_esquema.sql
+          psql -v ON_ERROR_STOP=1 -f sql/02_datos.sql
+      - name: Ejecutar las consultas
+        run: psql -v ON_ERROR_STOP=1 -f sql/03_consultas.sql
+      - name: Verificar el contenido
+        run: |
+          test "$(psql -At -c 'SELECT COUNT(*) FROM libro')" = "3"
+          test "$(psql -At -c 'SELECT SUM(monto) FROM pedido')" = "45.00"
+      - name: Comprobar que las claves foráneas se respetan
+        run: |
+          if psql -c "INSERT INTO pedido VALUES ('nadie@x.com','978-0-553-21311-7','PayPal',1)" 2>/dev/null; then
+            echo "Se aceptó un pedido de un cliente inexistente"; exit 1
+          fi
